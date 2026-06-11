@@ -1,5 +1,12 @@
 import { Router } from "express";
-import { deleteVideo, getVideoById, publishVideo, togglePublishStatus, getAllVideos } from "../controllers/video.controller.js";
+import {
+  deleteVideo,
+  getVideoById,
+  publishVideo,
+  togglePublishStatus,
+  getAllVideos,
+  updateVideo,
+} from "../controllers/video.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
 
@@ -20,8 +27,11 @@ router.route("/publish-video").post(
   publishVideo,
 ); //works just fine😁
 router.route("/get-video/:videoId").get(getVideoById); //works just fine😁
-router.route("/delete-video/:videoId").delete( verifyJWT ,deleteVideo); //works just fine😁
-router.route("/toggle-published/:videoId").get(verifyJWT, togglePublishStatus) //works just fine😁
+router.route("/delete-video/:videoId").delete(verifyJWT, deleteVideo); //works just fine😁
+router.route("/toggle-published/:videoId").get(verifyJWT, togglePublishStatus); //works just fine😁
 router.route("/get-all-videos").get(getAllVideos); //works just fine😁
+router
+  .route("/update-video/:videoId")
+  .patch(upload.single("thumbnail"), verifyJWT, updateVideo); //works just fine😁
 
 export default router;

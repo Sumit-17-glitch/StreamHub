@@ -62,8 +62,9 @@ const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
 
   // find the video
-  const video = await Video.findById(videoId)
-  .select("-videoFile.publicId -thumbnail.publicId");
+  const video = await Video.findById(videoId).select(
+    "-videoFile.publicId -thumbnail.publicId",
+  );
 
   // if does not exists return false
   if (!video) {
@@ -123,7 +124,6 @@ const deleteVideo = asyncHandler(async (req, res) => {
 });
 
 const getAllVideos = asyncHandler(async (req, res) => {
-
   // get page, limit, query, sortBy, sortType from request query
   const {
     page = 1,
@@ -145,10 +145,10 @@ const getAllVideos = asyncHandler(async (req, res) => {
       $options: "i",
     },
   })
-  .skip(skip)
-  .limit(limit)
-  .sort({ [sortBy]: sortType === "desc" ? -1 : 1 })
-  .select("-videoFile.publicId -thumbnail.publicId");
+    .skip(skip)
+    .limit(limit)
+    .sort({ [sortBy]: sortType === "desc" ? -1 : 1 })
+    .select("-videoFile.publicId -thumbnail.publicId");
 
   // return response with videos
   return res
@@ -189,10 +189,68 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     );
 });
 
+const updateVideo = asyncHandler(async (req, res) => {
+  //get video id from request params
+  const { videoId } = req.params;
+
+  // find the video
+  const video = await Video.findById(videoId);
+  if(!video) {
+    throw new ApiError(404, "video not found");
+  }
+
+  //get user id from request
+  const userId = req.user?._id;
+
+  //update video only if the requester is the owner of the video
+  if (userId.toString() !== video.owner.toString()) {
+    throw new ApiError(500, "unathorized access");
+  }
+
+  //get title, description and thumbnail from request
+  const { title, description } = req.body;
+  const localThumbnailPath = req.file?.path;
+
+  //create an object with values to be updated
+  const valuesToBeUpdated = {};
+  if (title) {
+    valuesToBeUpdated.title = title;
+  }
+  if (description) {
+    valuesToBeUpdated.description = description;
+  }
+  if (localThumbnailPath) {
+    const thumbnailPublicId = video.thumbnail.publicId;
+
+    const thumbnailCloudinary =
+      await uploadFileToCloudinary(localThumbnailPath);
+
+    if (thumbnailCloudinary) {
+      valuesToBeUpdated["thumbnail.url"] = thumbnailCloudinary.secure_url;
+      valuesToBeUpdated["thumbnail.publicId"] = thumbnailCloudinary.public_id;
+
+      await deleteFromCloudinary(thumbnailPublicId);
+    }
+  }
+
+  //update video document in database and return the updated document in response
+  const newVideo = await Video.findByIdAndUpdate(
+    videoId,
+    { $set: valuesToBeUpdated },
+    { returnDocument: "after" },
+  )
+  .select("-videoFile.publicId -thumbnail.publicId");
+
+  return res
+    .status(200)
+    .json(new apiResponse(200, newVideo, "updated successfully"));
+});
+
 export {
   publishVideo,
   getVideoById,
   deleteVideo,
+  updateVideo,
   getAllVideos,
   togglePublishStatus,
 };
