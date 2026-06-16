@@ -123,7 +123,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
     .json(new apiResponse(200, {}, "video deleted succesfully"));
 });
 
-const getAllVideos = asyncHandler(async (req, res) => {
+const getAllVideosByUserId = asyncHandler(async (req, res) => {
   // get page, limit, query, sortBy, sortType from request query
   const {
     page = 1,
@@ -195,7 +195,7 @@ const updateVideo = asyncHandler(async (req, res) => {
 
   // find the video
   const video = await Video.findById(videoId);
-  if(!video) {
+  if (!video) {
     throw new ApiError(404, "video not found");
   }
 
@@ -238,16 +238,42 @@ const updateVideo = asyncHandler(async (req, res) => {
     videoId,
     { $set: valuesToBeUpdated },
     { returnDocument: "after" },
-  )
-  .select("-videoFile.publicId -thumbnail.publicId");
+  ).select("-videoFile.publicId -thumbnail.publicId");
 
   return res
     .status(200)
     .json(new apiResponse(200, newVideo, "updated successfully"));
 });
 
+const getAllVideos = asyncHandler(async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = "createdAt",
+    sortType = "desc",
+  } = req.query;
+
+  const skip = (page - 1) * limit;
+
+  // find videos from database based on above mentioned query params
+  const result = await Video.find({
+    isPublished: true,
+  })
+    .skip(skip)
+    .limit(limit)
+    .sort({ [sortBy]: sortType === "desc" ? -1 : 1 })
+    .populate("owner", "userName avatar.url")
+    .select("-videoFile.publicId -thumbnail.publicId");
+
+  // return response with videos
+  return res
+    .status(200)
+    .json(new apiResponse(200, result, "videos fetched successfully"));
+});
+
 export {
   publishVideo,
+  getAllVideosByUserId,
   getVideoById,
   deleteVideo,
   updateVideo,

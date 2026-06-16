@@ -105,7 +105,7 @@ const registerUser = asyncHandler(async (req, res) => {
   //check for user creation
   const createsUser = await User.findById(user._id).select(
     //it should be created user
-    "-password -refreshtoken",
+    "-avatar.publicid -coverImage.publicid -password -refreshtoken",
   );
   if (!createsUser) {
     throw new ApiError(500, "Something went wrong while Creating user");
@@ -118,8 +118,6 @@ const registerUser = asyncHandler(async (req, res) => {
 });
 
 const loginUser = asyncHandler(async (req, res) => {
-  //req body -> data
-  console.log("Body's data", req.body);
 
   const { email, userName, password } = req.body;
 
@@ -263,8 +261,8 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   const user = req.user;
 
   
-  console.log(typeof(user));
-  user = user.select("-coverImage.publicid -avatar.publicid");
+  // console.log(typeof(user));
+  // user = user.select("-coverImage.publicid -avatar.publicid");
   
 
   return res

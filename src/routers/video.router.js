@@ -6,6 +6,7 @@ import {
   togglePublishStatus,
   getAllVideos,
   updateVideo,
+  getAllVideosByUserId
 } from "../controllers/video.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
@@ -29,9 +30,10 @@ router.route("/publish-video").post(
 router.route("/get-video/:videoId").get(getVideoById); //works just fine😁
 router.route("/delete-video/:videoId").delete(verifyJWT, deleteVideo); //works just fine😁
 router.route("/toggle-published/:videoId").get(verifyJWT, togglePublishStatus); //works just fine😁
-router.route("/get-all-videos").get(getAllVideos); //works just fine😁
+router.route("/get-all-videos-user").get(getAllVideosByUserId); //works just fine😁
 router
   .route("/update-video/:videoId")
   .patch(upload.single("thumbnail"), verifyJWT, updateVideo); //works just fine😁
+router.route("/get-all-videos").get(getAllVideos);
 
 export default router;
