@@ -12,6 +12,10 @@ const publishVideo = asyncHandler(async (req, res) => {
   const userId = req.user?._id;
   const { title, description } = req.body;
 
+  console.log("Body :", req.body);
+  console.log("files :", req.files);
+  
+
   //get video and thumbnail from request
   const localVideoPath = req.files?.video[0]?.path;
   if (!localVideoPath) {
@@ -38,20 +42,24 @@ const publishVideo = asyncHandler(async (req, res) => {
   const duration = videoCloudianry.duration;
 
   //create video document in database
-  const video = await Video.create({
-    videoFile: {
-      url: videoCloudianry.secure_url,
-      publicId: videoCloudianry.public_id,
-    },
-    thumbnail: {
-      url: thumbnailCloudinary.secure_url,
-      publicId: thumbnailCloudinary.public_id,
-    },
-    title: title,
-    description: description,
-    duration: duration,
-    owner: req.user?._id,
-  });
+  const createdVideo = await Video.create({
+  videoFile: {
+    url: videoCloudianry.secure_url,
+    publicId: videoCloudianry.public_id,
+  },
+  thumbnail: {
+    url: thumbnailCloudinary.secure_url,
+    publicId: thumbnailCloudinary.public_id,
+  },
+  title,
+  description,
+  duration,
+  owner: req.user?._id,
+});
+
+const video = await Video.findById(createdVideo._id)
+  .populate("owner", "userName")
+  .select("-videoFile.publicId -thumbnail.publicId");
 
   return res
     .status(200)
