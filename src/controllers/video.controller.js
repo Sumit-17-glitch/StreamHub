@@ -1,3 +1,4 @@
+import { User } from "../models/user.model.js";
 import { Video } from "../models/video.model.js";
 import ApiError from "../utils/apiError.js";
 import { apiResponse } from "../utils/apiResponse.js";
@@ -14,7 +15,6 @@ const publishVideo = asyncHandler(async (req, res) => {
 
   console.log("Body :", req.body);
   console.log("files :", req.files);
-  
 
   //get video and thumbnail from request
   const localVideoPath = req.files?.video[0]?.path;
@@ -43,23 +43,23 @@ const publishVideo = asyncHandler(async (req, res) => {
 
   //create video document in database
   const createdVideo = await Video.create({
-  videoFile: {
-    url: videoCloudianry.secure_url,
-    publicId: videoCloudianry.public_id,
-  },
-  thumbnail: {
-    url: thumbnailCloudinary.secure_url,
-    publicId: thumbnailCloudinary.public_id,
-  },
-  title,
-  description,
-  duration,
-  owner: req.user?._id,
-});
+    videoFile: {
+      url: videoCloudianry.secure_url,
+      publicId: videoCloudianry.public_id,
+    },
+    thumbnail: {
+      url: thumbnailCloudinary.secure_url,
+      publicId: thumbnailCloudinary.public_id,
+    },
+    title,
+    description,
+    duration,
+    owner: req.user?._id,
+  });
 
-const video = await Video.findById(createdVideo._id)
-  .populate("owner", "userName")
-  .select("-videoFile.publicId -thumbnail.publicId");
+  const video = await Video.findById(createdVideo._id)
+    .populate("owner", "userName")
+    .select("-videoFile.publicId -thumbnail.publicId");
 
   return res
     .status(200)
@@ -68,11 +68,12 @@ const video = await Video.findById(createdVideo._id)
 
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
+  const user = req.user;
 
   // find the video
-  const video = await Video.findById(videoId).select(
-    "-videoFile.publicId -thumbnail.publicId",
-  );
+  const video = await Video.findById(videoId)
+    .populate("owner", "avatar.url _id userName")
+    .select("-videoFile.publicId -thumbnail.publicId");
 
   // if does not exists return false
   if (!video) {
@@ -136,7 +137,7 @@ const getAllVideosByUserId = asyncHandler(async (req, res) => {
   const {
     page = 1,
     limit = 10,
-    query,
+    query = "",
     sortBy = "createdAt",
     sortType = "desc",
     userId,
@@ -144,18 +145,24 @@ const getAllVideosByUserId = asyncHandler(async (req, res) => {
 
   const skip = (page - 1) * limit;
 
-  // find videos from database based on above mentioned query params
-  const result = await Video.find({
+  const filter = {
     owner: userId,
     isPublished: true,
-    description: {
+  };
+
+  if (query.trim()) {
+    filter.description = {
       $regex: query,
       $options: "i",
-    },
-  })
+    };
+  }
+
+  // find videos from database based on above mentioned query params
+  const result = await Video.find(filter)
     .skip(skip)
     .limit(limit)
     .sort({ [sortBy]: sortType === "desc" ? -1 : 1 })
+    .populate("owner", "_id, userName avatar.url")
     .select("-videoFile.publicId -thumbnail.publicId");
 
   // return response with videos
@@ -257,16 +264,26 @@ const getAllVideos = asyncHandler(async (req, res) => {
   const {
     page = 1,
     limit = 10,
+    query = "",
     sortBy = "createdAt",
     sortType = "desc",
   } = req.query;
 
   const skip = (page - 1) * limit;
 
-  // find videos from database based on above mentioned query params
-  const result = await Video.find({
+  const filter = {
     isPublished: true,
-  })
+  };
+
+  if (query.trim()) {
+    filter.description = {
+      $regex: query,
+      $options: "i",
+    };
+  }
+
+  // find videos from database based on above mentioned query params
+  const result = await Video.find(filter)
     .skip(skip)
     .limit(limit)
     .sort({ [sortBy]: sortType === "desc" ? -1 : 1 })
@@ -279,6 +296,38 @@ const getAllVideos = asyncHandler(async (req, res) => {
     .json(new apiResponse(200, result, "videos fetched successfully"));
 });
 
+const updateViewsAndWatchHistory = asyncHandler(async (req, res) => {
+  console.log("inside updateViewsAndWatchHistory");
+  
+  const { videoId } = req.params;
+  const user = req.user;
+
+  const video = await Video.findByIdAndUpdate(videoId, {
+    $inc: {
+      views: 1,
+    },
+  });
+
+  if(user){
+    await User.findByIdAndUpdate(user._id,{
+      $pull:{
+        watchHistory: videoId
+      }
+    })
+    await User.findByIdAndUpdate(user._id,{
+      $push:{
+        watchHistory:videoId
+      }
+    })
+  }
+
+  return res
+  .status(200)
+  .json(
+    new apiResponse(200, {},"success")
+  )
+});
+
 export {
   publishVideo,
   getAllVideosByUserId,
@@ -287,4 +336,5 @@ export {
   updateVideo,
   getAllVideos,
   togglePublishStatus,
+  updateViewsAndWatchHistory,
 };

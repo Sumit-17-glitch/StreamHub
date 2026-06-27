@@ -6,10 +6,12 @@ import {
   togglePublishStatus,
   getAllVideos,
   updateVideo,
-  getAllVideosByUserId
+  getAllVideosByUserId,
+  updateViewsAndWatchHistory
 } from "../controllers/video.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
+import { optionalAuth } from "../middlewares/optional.middleware.js";
 
 const router = Router();
 
@@ -35,5 +37,6 @@ router
   .route("/update-video/:videoId")
   .patch(upload.single("thumbnail"), verifyJWT, updateVideo); //works just fine😁
 router.route("/get-all-videos").get(getAllVideos);
+router.route("/update-view-watchHistory/:videoId").get(optionalAuth, updateViewsAndWatchHistory);
 
 export default router;
