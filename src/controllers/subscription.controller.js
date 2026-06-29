@@ -72,6 +72,19 @@ const getUserChannelSubscriberList = asyncHandler(async (req, res) => {
         as: "subscriberList",
       },
     },
+    {
+      $addFields:{
+        subscriberCount:{
+          $size : "$subscriberList"
+        }
+      }
+    },
+    {
+      $project :{
+        subscriberList : 1,
+        subscriberCount : 1
+      }
+    }
   ]);
 
   return res
@@ -79,7 +92,7 @@ const getUserChannelSubscriberList = asyncHandler(async (req, res) => {
     .json(
       new apiResponse(
         200,
-        subscriberList[0].subscriberList,
+        subscriberList[0],
         "subscriber list fetched successfully",
       ),
     );
