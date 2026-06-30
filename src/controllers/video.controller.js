@@ -290,10 +290,18 @@ const getAllVideos = asyncHandler(async (req, res) => {
     .populate("owner", "userName avatar.url")
     .select("-videoFile.publicId -thumbnail.publicId");
 
+  const data = {};
+  data.videos = result;
+  data.currentPage = page;
+  data.videoCount = await Video.countDocuments(filter);
+  data.totalPages = Math.ceil(data.videoCount / limit);
+  data.isNextPage = page < data.totalPages;
+  data.isPrevPage = page > 1;
+
   // return response with videos
   return res
     .status(200)
-    .json(new apiResponse(200, result, "videos fetched successfully"));
+    .json(new apiResponse(200, data, "videos fetched successfully"));
 });
 
 const updateViewsAndWatchHistory = asyncHandler(async (req, res) => {
